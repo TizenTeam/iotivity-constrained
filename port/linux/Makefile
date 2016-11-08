@@ -75,3 +75,9 @@ cleanall: clean
 install: ${all}
 	install -d ${install_bin_dir}
 	install $^ ${install_bin_dir}
+
+demo: simpleclient simpleserver
+	xterm -e ${CURDIR}/simpleserver &
+	sleep 5
+	${CURDIR}/simpleclient
+
