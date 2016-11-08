@@ -21,24 +21,28 @@
 #include <signal.h>
 #include <stdio.h>
 
+#define TRACE() PRINT( "%s:%d: %s\n", __FILE__ , __LINE__ , __PRETTY_FUNCTION__ )
+
 static pthread_mutex_t mutex;
 static pthread_cond_t cv;
 static struct timespec ts;
 static int quit = 0;
-static bool light_state = false;
+static bool switch_state = false;
 
 static void
 set_device_custom_property(void *data)
 {
-  oc_set_custom_device_property(purpose, "desk lamp");
+    TRACE();
+  oc_set_custom_device_property(purpose, "Smart switch");
 }
 
 static void
 app_init(void)
 {
+    TRACE();
   oc_init_platform("Intel", NULL, NULL);
 
-  oc_add_device("/oic/d", "oic.d.light", "Kishen's light", "1.0", "1.0",
+  oc_add_device("/oic/d", "oic.r.switch.binary", "RzR's switch", "1.0", "1.0",
                 set_device_custom_property, NULL);
 
 #ifdef OC_SECURITY
@@ -47,28 +51,30 @@ app_init(void)
 }
 
 static void
-get_light(oc_request_t *request, oc_interface_mask_t interface, void *user_data)
+get_switch(oc_request_t *request, oc_interface_mask_t interface, void *user_data)
 {
-  PRINT("GET_light:\n");
+    TRACE();
+  PRINT("GET_switch:\n");
   oc_rep_start_root_object();
   switch (interface) {
   case OC_IF_BASELINE:
     oc_process_baseline_interface(request->resource);
   case OC_IF_RW:
-    oc_rep_set_boolean(root, state, light_state);
+    oc_rep_set_boolean(root, state, switch_state);
     break;
   default:
     break;
   }
   oc_rep_end_root_object();
   oc_send_response(request, OC_STATUS_OK);
-  PRINT("Light state %d\n", light_state);
+  PRINT("Switch state %d\n", switch_state);
 }
 
 static void
-put_light(oc_request_t *request, oc_interface_mask_t interface, void *user_data)
+put_switch(oc_request_t *request, oc_interface_mask_t interface, void *user_data)
 {
-  PRINT("PUT_light:\n");
+    TRACE();
+  PRINT("PUT_switch:\n");
   bool state = false;
   oc_rep_t *rep = request->request_payload;
   while (rep != NULL) {
@@ -86,14 +92,15 @@ put_light(oc_request_t *request, oc_interface_mask_t interface, void *user_data)
     rep = rep->next;
   }
   oc_send_response(request, OC_STATUS_CHANGED);
-  light_state = state;
+  switch_state = state;
 }
 
 static void
 register_resources(void)
 {
-  oc_resource_t *res = oc_new_resource("/light/1", 1, 0);
-  oc_resource_bind_resource_type(res, "oic.r.light");
+    TRACE();
+  oc_resource_t *res = oc_new_resource("/BinarySwitchResURI", 1, 0);
+  oc_resource_bind_resource_type(res, "oic.r.switch.binary");
   oc_resource_bind_resource_interface(res, OC_IF_RW);
   oc_resource_set_default_interface(res, OC_IF_RW);
 
@@ -103,14 +110,16 @@ register_resources(void)
 
   oc_resource_set_discoverable(res, true);
   oc_resource_set_periodic_observable(res, 1);
-  oc_resource_set_request_handler(res, OC_GET, get_light, NULL);
-  oc_resource_set_request_handler(res, OC_PUT, put_light, NULL);
+  oc_resource_set_request_handler(res, OC_GET, get_switch, NULL);
+  oc_resource_set_request_handler(res, OC_PUT, put_switch, NULL);
+  oc_resource_set_request_handler(res, OC_POST, put_switch, NULL);
   oc_add_resource(res);
 }
 
 static void
 signal_event_loop(void)
 {
+    TRACE();
   pthread_mutex_lock(&mutex);
   pthread_cond_signal(&cv);
   pthread_mutex_unlock(&mutex);
@@ -119,6 +128,7 @@ signal_event_loop(void)
 static void
 handle_signal(int signal)
 {
+    TRACE();
   signal_event_loop();
   quit = 1;
 }
@@ -126,6 +136,7 @@ handle_signal(int signal)
 int
 main(void)
 {
+    TRACE();
   int init;
   struct sigaction sa;
   sigfillset(&sa.sa_mask);
