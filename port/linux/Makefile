@@ -50,9 +50,9 @@ obj/client/%.o: %.c
 	@mkdir -p ${@D}
 	${CC} -c -o $@ $< ${CFLAGS} -DOC_CLIENT
 
-server: ${OBJ_COMMON} ${OBJ_SERVER}
+server: ${OBJ_COMMON} ${OBJ_SERVER} ../../apps/server_linux.c ../../apps/linux/platform.c
 	echo ${OBJ_COMMON}
-	${CC} -o $@ ${OBJ_COMMON} ${OBJ_SERVER} ../../apps/server_linux.c -DOC_SERVER ${CFLAGS} ${LIBS}
+	${CC} -o $@ $^ -DOC_SERVER ${CFLAGS} ${LIBS}
 
 client: ${OBJ_COMMON} ${OBJ_CLIENT}
 	${CC} -o $@ ${OBJ_COMMON} ${OBJ_CLIENT} ../../apps/client_linux.c -DOC_CLIENT ${CFLAGS}  ${LIBS}
