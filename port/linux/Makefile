@@ -84,3 +84,5 @@ demo: simpleclient simpleserver
 	sleep 5
 	${CURDIR}/simpleclient
 
+test:
+	ls ${all}
