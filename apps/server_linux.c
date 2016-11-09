@@ -70,6 +70,14 @@ get_switch(oc_request_t *request, oc_interface_mask_t interface, void *user_data
   PRINT("Switch state %d\n", switch_state);
 }
 
+void platform_setValue(bool value);
+
+static void set_value(bool state)
+{
+    switch_state = state;
+    platform_setValue(switch_state);
+}
+
 static void
 post_switch(oc_request_t *request, oc_interface_mask_t interface, void *user_data)
 {
@@ -92,7 +100,7 @@ post_switch(oc_request_t *request, oc_interface_mask_t interface, void *user_dat
     rep = rep->next;
   }
   oc_send_response(request, OC_STATUS_CHANGED);
-  switch_state = state;
+  set_value(state);
 }
 
 static void
