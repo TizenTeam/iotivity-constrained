@@ -26,7 +26,7 @@
 
 //#include "common.h"
 
-#define CONFIG_WANT_GPIO
+#define CONFIG_WANT_GPIO  __FILE__
 
 #ifndef CONFIG_GPIO
 #define CONFIG_GPIO 22 // =pin13@artik10
