@@ -72,6 +72,9 @@ clean:
 cleanall: clean
 	rm -rf ${all}
 
+distclean: cleanall
+	pwd
+
 install: ${all}
 	install -d ${install_bin_dir}
 	install $^ ${install_bin_dir}
