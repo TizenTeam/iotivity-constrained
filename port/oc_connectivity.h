@@ -86,7 +86,7 @@ typedef struct
   {
     oc_ipv6_addr_t ipv6_addr;
     oc_le_addr_t bt_addr;
-  };
+  } addr;
 } oc_endpoint_t;
 
 #define oc_make_ip_endpoint(__name__, __flags__, __port__, ...)                \
