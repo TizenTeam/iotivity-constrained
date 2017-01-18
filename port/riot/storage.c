@@ -43,3 +43,4 @@ oc_storage_write(const char *store, uint8_t *buf, size_t size)
   return size;
 }
 #endif /* OC_SECURITY */
+typedef int make_iso_compilers_happy;
