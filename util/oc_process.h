@@ -303,7 +303,7 @@ typedef unsigned char oc_process_num_events_t;
 #else
 #define OC_PROCESS(name, strname)                                              \
   OC_PROCESS_THREAD(name, ev, data);                                           \
-  struct oc_process name = { NULL, strname, process_thread_##name, {NULL}}
+  struct oc_process name = { NULL, strname, process_thread_##name}
 #endif
 
 /** @} */
