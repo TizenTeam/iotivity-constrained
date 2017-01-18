@@ -224,7 +224,7 @@ typedef struct oc_rep_s
     oc_array_t value_array;
     struct oc_rep_s *value_object;
     struct oc_rep_s *value_object_array;
-  };
+  } value;
 } oc_rep_t;
 
 uint16_t oc_parse_rep(const uint8_t *payload, uint16_t payload_size,
