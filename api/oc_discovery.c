@@ -292,10 +292,10 @@ oc_ri_process_discovery_payload(uint8_t *payload, int len,
               resource_info = resource_info->next;
             }
             if (secure) {
-              handle.endpoint.ipv6_addr.port = dtls_port;
+              handle.endpoint.addr.ipv6_addr.port = dtls_port;
               handle.endpoint.flags |= SECURED;
             } else {
-              handle.endpoint.ipv6_addr.port = default_port;
+              handle.endpoint.addr.ipv6_addr.port = default_port;
               handle.endpoint.flags &= ~SECURED;
             }
 
