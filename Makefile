@@ -2,11 +2,14 @@ port?=linux
 
 .PHONY: default help README
 
-default: help
-
-help: README
-	cat $<
-	@echo "make all : to build port=${port}"
+default: all
+	sync
 
 %: port/${port}
 	make -C $< $@
+
+help: README.rst
+	cat $<
+	@echo "make all : to build port=${port}"
+
+.PHONY: help
