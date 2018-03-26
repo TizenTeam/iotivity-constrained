@@ -48,7 +48,7 @@ def build_all(flag, extra_option_str):
 def build_linux(flag, extra_option_str):
     print ("*********** Build for linux ************")
     build_options = {}
-    call_scons(build_options, extra_option_str)
+    call_make(build_options, extra_option_str)
 
 
 # Main module starts here
@@ -60,6 +60,10 @@ script_name = sys.argv[0]
 
 # May be overridden in user's shell
 VERBOSE = os.getenv("VERBOSE", "1")
+EXEC_MODE = os.getenv("EXEC_MODE", True)
+if EXEC_MODE in ['false', 'False', '0']:
+    EXEC_MODE = False
+
 
 if arg_num == 1:
     build_all("true", "")
