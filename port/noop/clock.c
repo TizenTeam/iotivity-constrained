@@ -27,7 +27,7 @@ oc_clock_init(void)
 oc_clock_time_t
 oc_clock_time(void)
 {
-  return time;
+  return 0;
 }
 
 unsigned long
@@ -39,4 +39,5 @@ oc_clock_seconds(void)
 void
 oc_clock_wait(oc_clock_time_t t)
 {
+    (void) t;
 }
