@@ -1,6 +1,5 @@
 /*
-// Copyright (c) 2018 Samsung Electronics France SAS
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +15,10 @@
 */
 
 #define __USE_GNU
+#include "ipcontext.h"
+#ifdef OC_TCP
+#include "tcpadapter.h"
+#endif
 #include "oc_buffer.h"
 #include "oc_core_res.h"
 #include "oc_endpoint.h"
@@ -23,16 +26,11 @@
 #include "port/oc_connectivity.h"
 #include <assert.h>
 #include <errno.h>
-
-/*
-  This include creates issues with some toolchains and seems not
-  necessary for compilation.
-#include <linux/ipv6.h>
-*/
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 /* Some outdated toolchains do not define IFA_FLAGS.
    Note: Requires Linux kernel 3.14 or later. */
@@ -52,32 +50,8 @@ static const uint8_t ALL_OCF_NODES_SL[] = {
 };
 #define ALL_COAP_NODES_V4 0xe00001bb
 
-typedef struct ip_context_t
-{
-  struct ip_context_t *next;
-  int mcast_sock;
-  int server_sock;
-  uint16_t port;
-#ifdef OC_SECURITY
-  struct sockaddr_storage secure;
-  int secure_sock;
-  uint16_t dtls_port;
-#endif /* OC_SECURITY */
-#ifdef OC_IPV4
-  struct sockaddr_storage mcast4;
-  struct sockaddr_storage server4;
-  int mcast4_sock;
-  int server4_sock;
-  uint16_t port4;
-#ifdef OC_SECURITY
-  struct sockaddr_storage secure4;
-  int secure4_sock;
-  uint16_t dtls4_port;
-#endif /* OC_SECURITY */
-#endif /* OC_IPV4 */
-  int terminate;
-  int device;
-} ip_context_t;
+int ifchange_sock;
+bool ifchange_initialized;
 
 #ifdef OC_DYNAMIC_ALLOCATION
 OC_LIST(ip_contexts);
@@ -88,7 +62,6 @@ static ip_context_t devices[OC_MAX_NUM_DEVICES];
 void
 oc_network_event_handler_mutex_init(void)
 {
-    OC_ERR("initializing network event handler mutex\n");
 }
 
 void
@@ -101,9 +74,10 @@ oc_network_event_handler_mutex_unlock(void)
 {
 }
 
-static ip_context_t *
-get_ip_context_for_device(int device)
-{
+void oc_network_event_handler_mutex_destroy(void) {
+}
+
+static ip_context_t *get_ip_context_for_device(int device) {
 #ifdef OC_DYNAMIC_ALLOCATION
   ip_context_t *dev = oc_list_head(ip_contexts);
   while (dev != NULL && dev->device != device) {
@@ -118,30 +92,88 @@ get_ip_context_for_device(int device)
   return dev;
 }
 
-static void *
-network_event_thread(void *data)
-{
+#ifdef OC_IPV4
+static int add_mcast_sock_to_ipv4_mcast_group(int mcast_sock,
+                                              const struct in_addr *local,
+                                              int interface_index) {
+  struct ip_mreqn mreq;
+
+  memset(&mreq, 0, sizeof(mreq));
+  mreq.imr_multiaddr.s_addr = htonl(ALL_COAP_NODES_V4);
+  mreq.imr_ifindex = interface_index;
+  memcpy(&mreq.imr_address, local, sizeof(struct in_addr));
+
+  (void)setsockopt(mcast_sock, IPPROTO_IP, IP_DROP_MEMBERSHIP, &mreq,
+                   sizeof(mreq));
+
+  if (setsockopt(mcast_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
+                 sizeof(mreq)) == -1) {
+    OC_ERR("joining IPv4 multicast group %d", errno);
+    return -1;
+  }
+
+  return 0;
+}
+#endif /* OC_IPV4 */
+
+static int add_mcast_sock_to_ipv6_mcast_group(int mcast_sock,
+                                              int interface_index) {
+
+    (void) mcast_sock;
+    (void) interface_index;
+  return 0;
+}
+
+static int configure_mcast_socket(int mcast_sock, int sa_family) {
+  int ret = 0;
+  (void) mcast_sock;
+  (void) sa_family;
+  return ret;
+}
+
+/* Called after network interface up/down events.
+ * This function reconfigures IPv6/v4 multicast sockets for
+ * all logical devices.
+ */
+static int process_interface_change_event(void) {
+  int ret = 0;
+
+  return ret;
+}
+
+
+static void *network_event_thread(void *data) {
+  (void) data;
+  return NULL;
 }
 
 static void
-get_interface_addresses(unsigned char family, uint16_t port, bool secure)
+get_interface_addresses(unsigned char family, uint16_t port, bool secure,
+                        bool tcp)
 {
+  (void) family;
+  (void) port;
+  (void) secure;
+  (void) tcp;
 }
 
 oc_endpoint_t *
 oc_connectivity_get_endpoints(int device)
 {
+  (void) device;
+  return NULL;
 }
 
-void
-oc_send_buffer(oc_message_t *message)
-{
+void oc_send_buffer(oc_message_t *message) {
+  (void) message;
+  OC_DBG("%s:%d: TODO: implement %s", __FILE__, __LINE__, __funct__);
 }
 
 #ifdef OC_CLIENT
 void
 oc_send_discovery_request(oc_message_t *message)
 {
+  (void) message;
 }
 #endif /* OC_CLIENT */
 
@@ -149,7 +181,7 @@ oc_send_discovery_request(oc_message_t *message)
 static int
 connectivity_ipv4_init(ip_context_t *dev)
 {
-  OC_DBG("Initializing IPv4 connectivity for device %d\n", dev->device);
+  OC_DBG("Initializing IPv4 connectivity for device %d", dev->device);
   memset(&dev->mcast4, 0, sizeof(struct sockaddr_storage));
   memset(&dev->server4, 0, sizeof(struct sockaddr_storage));
 
@@ -172,7 +204,7 @@ connectivity_ipv4_init(ip_context_t *dev)
 
   dev->secure4_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
   if (dev->secure4_sock < 0) {
-    OC_ERR("creating secure IPv4 socket\n");
+    OC_ERR("creating secure IPv4 socket");
     return -1;
   }
 #endif /* OC_SECURITY */
@@ -181,95 +213,79 @@ connectivity_ipv4_init(ip_context_t *dev)
   dev->mcast4_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
   if (dev->server4_sock < 0 || dev->mcast4_sock < 0) {
-    OC_ERR("creating IPv4 server sockets\n");
+    OC_ERR("creating IPv4 server sockets");
     return -1;
   }
 
   if (bind(dev->server4_sock, (struct sockaddr *)&dev->server4,
            sizeof(dev->server4)) == -1) {
-    OC_ERR("binding server4 socket %d\n", errno);
+    OC_ERR("binding server4 socket %d", errno);
     return -1;
   }
 
   socklen_t socklen = sizeof(dev->server4);
   if (getsockname(dev->server4_sock, (struct sockaddr *)&dev->server4,
                   &socklen) == -1) {
-    OC_ERR("obtaining server4 socket information %d\n", errno);
+    OC_ERR("obtaining server4 socket information %d", errno);
     return -1;
   }
 
   dev->port4 = ntohs(l->sin_port);
 
-  struct ip_mreq mreq;
-  memset(&mreq, 0, sizeof(mreq));
-  mreq.imr_multiaddr.s_addr = htonl(ALL_COAP_NODES_V4);
-  if (setsockopt(dev->mcast4_sock, IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreq,
-                 sizeof(mreq)) == -1) {
-    OC_ERR("joining IPv4 multicast group %d\n", errno);
+  if (configure_mcast_socket(dev->mcast4_sock, AF_INET) < 0) {
     return -1;
   }
 
   int reuse = 1;
   if (setsockopt(dev->mcast4_sock, SOL_SOCKET, SO_REUSEADDR, &reuse,
                  sizeof(reuse)) == -1) {
-    OC_ERR("setting reuseaddr IPv4 option %d\n", errno);
+    OC_ERR("setting reuseaddr IPv4 option %d", errno);
     return -1;
   }
   if (bind(dev->mcast4_sock, (struct sockaddr *)&dev->mcast4,
            sizeof(dev->mcast4)) == -1) {
-    OC_ERR("binding mcast IPv4 socket %d\n", errno);
+    OC_ERR("binding mcast IPv4 socket %d", errno);
     return -1;
   }
 
 #ifdef OC_SECURITY
   if (setsockopt(dev->secure4_sock, SOL_SOCKET, SO_REUSEADDR, &reuse,
                  sizeof(reuse)) == -1) {
-    OC_ERR("setting reuseaddr IPv4 option %d\n", errno);
+    OC_ERR("setting reuseaddr IPv4 option %d", errno);
     return -1;
   }
 
   if (bind(dev->secure4_sock, (struct sockaddr *)&dev->secure4,
            sizeof(dev->secure4)) == -1) {
-    OC_ERR("binding IPv4 secure socket %d\n", errno);
+    OC_ERR("binding IPv4 secure socket %d", errno);
     return -1;
   }
 
   socklen = sizeof(dev->secure4);
   if (getsockname(dev->secure4_sock, (struct sockaddr *)&dev->secure4,
                   &socklen) == -1) {
-    OC_ERR("obtaining DTLS4 socket information %d\n", errno);
+    OC_ERR("obtaining DTLS4 socket information %d", errno);
     return -1;
   }
 
   dev->dtls4_port = ntohs(sm->sin_port);
 #endif /* OC_SECURITY */
 
-  OC_DBG("Successfully initialized IPv4 connectivity for device %d\n",
+  OC_DBG("Successfully initialized IPv4 connectivity for device %d",
          dev->device);
 
   return 0;
 }
 #endif
 
-static int
-add_mcast_sock_to_ipv6_multicast_group(int sock, const uint8_t *addr)
-{
-
-}
-
-int
-oc_connectivity_init(int device)
-{
+int oc_connectivity_init(int device) {
+  (void) device;
+  OC_DBG("Initializing connectivity for device %d", device);
+  return -1;
 }
 
 void
 oc_connectivity_shutdown(int device)
 {
-  ip_context_t *dev = get_ip_context_for_device(device);
-  dev->terminate = 1;
-
-  close(dev->server_sock);
-  close(dev->mcast_sock);
-
-  OC_DBG("oc_connectivity_shutdown for device %d\n", device);
+  (void) device;
 }
