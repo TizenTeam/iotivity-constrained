@@ -37,7 +37,9 @@ port/contiki/obj_native/
 port/contiki/*.native
 port/contiki/symbols.*
 port/openthread/output
+*.a
 *.o
+*.so
 *.cmd
 .clang-format
 _clang-format
