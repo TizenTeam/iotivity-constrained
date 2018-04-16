@@ -19,7 +19,6 @@
 #include <assert.h>
 #include <errno.h>
 
-static int urandom_fd;
 
 void
 oc_random_init(void)
